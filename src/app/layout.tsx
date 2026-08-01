@@ -16,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'PromptStack - AI Prompt Management Platform',
-  description: 'Create, manage, and execute AI prompts with dynamic variables. Support for Google Gemini and GroqCloud.',
+  description:
+    'Create, manage, and execute AI prompts with dynamic variables. Support for Google Gemini and GroqCloud.',
 };
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-dvh bg-background">
-        <Toaster position="top-right" richColors />
+        <Toaster expand visibleToasts={6} position="top-right" richColors />
         <Navbar />
         {children}
         <footer className="border-t border-border py-8">

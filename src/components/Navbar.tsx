@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BookOpen, LayoutGrid, Menu, Moon, Plus, Sparkles, Sun } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { CreatePromptDialog } from '@/components/CreatePromptDialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,8 @@ export function Navbar() {
     // { to: "/favorites", label: "Favorites", icon: Star },
     { to: '/help', label: 'Help', icon: BookOpen },
   ] as const;
+
+  const pathname = usePathname();
 
   return (
     <>
@@ -49,7 +52,10 @@ export function Navbar() {
                 href={to}
                 aria-label={label}
                 className={cn(
-                  'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-ring'
+                  'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 focus-ring',
+                  pathname === to
+                    ? 'bg-surface-raised text-foreground font-semibold border border-border shadow-xs2'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
                 <Icon className="size-4" aria-hidden />
@@ -76,7 +82,16 @@ export function Navbar() {
               <DropdownMenuContent align="start" className="w-52 rounded-xl">
                 {navigationItems.map(({ to, label, icon: Icon }) => (
                   <DropdownMenuItem key={to}>
-                    <Link href={to} className="flex gap-2" aria-label={label}>
+                    <Link
+                      href={to}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-150 focus-ring',
+                        pathname === to
+                          ? 'bg-surface-raised text-foreground font-semibold border border-border shadow-xs2'
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                      )}
+                      aria-label={label}
+                    >
                       <Icon className="size-4" aria-hidden />
                       {label}
                     </Link>

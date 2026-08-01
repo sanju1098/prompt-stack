@@ -1,14 +1,14 @@
-import { Copy, Play } from 'lucide-react';
+import { Copy, ExternalLink, Play } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import type { PromptCardProps } from '@/global/types';
 import { cn } from '@/lib/utils';
 
 const providerStyles: Record<string, string> = {
   gemini: 'bg-[oklch(0.95_0.04_255)] text-[oklch(0.42_0.16_260)]',
   groq: 'bg-[oklch(0.95_0.05_50)] text-[oklch(0.48_0.16_45)]',
-  openai: 'bg-[oklch(0.95_0.04_165)] text-[oklch(0.42_0.11_165)]',
 };
 
 export function PromptCard({ prompt, onOpen }: PromptCardProps) {
@@ -45,9 +45,22 @@ export function PromptCard({ prompt, onOpen }: PromptCardProps) {
           </p>
         </div>
 
-        <pre className="mt-1 line-clamp-3 whitespace-pre-wrap wrap-break-word rounded-xl border border-border bg-surface-raised p-3 font-mono text-[12.5px] leading-relaxed text-muted-foreground">
-          {prompt.template}
-        </pre>
+        <div className="relative mt-1 rounded-xl border border-border bg-surface-raised p-3 font-mono text-[12.5px] leading-relaxed text-muted-foreground">
+          <Button
+            variant="ghost"
+            aria-label={`Copy ${prompt.title} template`}
+            onClick={() => {
+              void navigator.clipboard?.writeText(prompt.template);
+              toast.success('Template copied to clipboard');
+            }}
+            className="absolute right-2 top-2 rounded-md p-0 h-fit"
+          >
+            <Copy aria-hidden />
+          </Button>
+          <p className="line-clamp-3 overflow-hidden whitespace-pre-wrap wrap-break-word pr-6">
+            {prompt.template}
+          </p>
+        </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
           {vars.length === 0 ? (
@@ -65,26 +78,26 @@ export function PromptCard({ prompt, onOpen }: PromptCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border bg-surface-raised/60 px-5 py-3">
-        <p className="text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{prompt.executionCount ?? 0}</span> runs
-        </p>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Copy ${prompt.title} template`}
-            onClick={() => {
-              void navigator.clipboard?.writeText(prompt.template);
-              toast.success('Template copied to clipboard');
-            }}
-          >
-            <Copy aria-hidden />
-          </Button>
-          <Button size="sm" onClick={() => onOpen(prompt)}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface-raised/60 px-5 py-3">
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">{prompt.executionCount ?? 0}</span> runs
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => onOpen(prompt)}>
             <Play aria-hidden />
             Playground
           </Button>
+
+          <Link
+            href={`/${prompt._id}/prompt`}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-2')}
+          >
+            <ExternalLink aria-hidden />
+            View in detail
+          </Link>
         </div>
       </div>
     </article>

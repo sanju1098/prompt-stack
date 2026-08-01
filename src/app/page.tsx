@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Layers, Play, Search, Sparkles, Star } from 'lucide-react';
+import { Brain, Layers, Play, Search, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { getPromptsAction } from '@/app/actions/promptActions';
 import { CreatePromptDialog } from '@/components/CreatePromptDialog';
@@ -56,9 +56,9 @@ export default function Home() {
 
   const stats = useMemo(
     () => [
-      { label: 'Prompts saved', value: loading ? '…' : prompts.length, icon: Layers },
+      { label: 'Total Prompts', value: loading ? '…' : prompts.length, icon: Layers },
       { label: 'Total runs', value: 100, icon: Play },
-      { label: 'Favorites', value: 3, icon: Star },
+      { label: 'Providers', value: 2, icon: Brain },
     ],
     [loading, prompts.length]
   );
@@ -137,20 +137,20 @@ export default function Home() {
                 aria-label="Filter by category"
                 className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 scrollbar-hide"
               >
-                {FILTER_OPTIONS.map((c) => (
+                {FILTER_OPTIONS.map((filterOpt) => (
                   <button
-                    key={c}
+                    key={filterOpt}
                     role="tab"
-                    aria-selected={filter === c}
-                    onClick={() => setFilter(c as Category | 'All')}
+                    aria-selected={filter === filterOpt}
+                    onClick={() => setFilter(filterOpt as Category | 'All')}
                     className={cn(
                       'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 focus-ring',
-                      filter === c
+                      filter === filterOpt
                         ? 'border-transparent bg-primary text-primary-foreground shadow-soft'
                         : 'border-border bg-surface text-muted-foreground hover:border-border-strong hover:text-foreground'
                     )}
                   >
-                    {c}
+                    {filterOpt}
                   </button>
                 ))}
               </div>

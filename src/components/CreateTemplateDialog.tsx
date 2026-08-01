@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createPromptAction } from '@/app/actions/promptActions';
+import { createTemplateAction } from '@/app/actions/templateActions';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,30 +26,50 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CATEGORIES } from '@/global/constants';
 import { LLM_PROVIDERS } from '@/global/providers';
-import type { Category, CreatePromptDialogProps, PromptFormData, Provider } from '@/global/types';
-import { extractVariables } from '@/lib/helpers';
+import type { Category, Provider } from '@/global/types';
+import { extractVariables } from '@/lib/parser';
 
-export function CreatePromptDialog({ open, close, onSuccessHandler }: CreatePromptDialogProps) {
-  const INITIAL_FORM_DATA: PromptFormData = {
-    title: '',
-    category: 'Coding',
-    description: '',
-    system: '',
-    template: '',
-    provider: 'gemini',
-    model: 'gemini-2.5-flash',
-  };
+interface CreateTemplateDialogProps {
+  open: boolean;
+  close: () => void;
+  onSuccessHandler?: () => void;
+}
 
-  const [formData, setFormData] = useState<PromptFormData>(INITIAL_FORM_DATA);
+interface TemplateFormData {
+  title: string;
+  category: Category;
+  description: string;
+  system: string;
+  template: string;
+  author: string;
+  isFeatured: boolean;
+  provider: Provider;
+  model: string;
+}
+
+const INITIAL_FORM_DATA: TemplateFormData = {
+  title: '',
+  category: 'Coding',
+  description: '',
+  system: '',
+  template: '',
+  author: 'PromptVault',
+  isFeatured: false,
+  provider: 'gemini',
+  model: 'gemini-2.5-flash',
+};
+
+export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTemplateDialogProps) {
+  const router = useRouter();
+  const [formData, setFormData] = useState<TemplateFormData>(INITIAL_FORM_DATA);
   const [showErrors, setShowErrors] = useState(false);
-  const [isFormSaving, setIsFormSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Reset form state whenever the dialog closes
   useEffect(() => {
     if (!open) {
       setFormData(INITIAL_FORM_DATA);
       setShowErrors(false);
-      setIsFormSaving(false);
+      setIsSaving(false);
     }
   }, [open]);
 
@@ -66,7 +87,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
   const titleError = showErrors && isTitleInvalid ? 'A title is required.' : '';
   const templateError = showErrors && isTemplateInvalid ? 'A template is required.' : '';
 
-  function handleFieldChange(field: keyof PromptFormData, value: string) {
+  function handleFieldChange(field: keyof TemplateFormData, value: any) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -81,7 +102,6 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     }));
   }
 
-  // Form submission handler with try/catch
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -90,38 +110,44 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
       return;
     }
 
-    setIsFormSaving(true);
+    setIsSaving(true);
 
     try {
-      const res = await createPromptAction({
-        title: formData?.title,
-        description: formData?.description,
-        category: formData?.category,
-        template: formData?.template,
-        systemInstruction: formData?.system,
+      const res = await createTemplateAction({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        template: formData.template,
+        systemInstruction: formData.system,
+        author: formData.author || 'PromptVault',
+        isFeatured: formData.isFeatured,
+        variables: templateVariables,
         modelConfig: {
-          provider: formData?.provider,
-          modelName: formData?.model,
+          provider: formData.provider,
+          modelName: formData.model,
           temperature: 0.7,
           maxTokens: 1024,
         },
       });
 
-      if (res?.success) {
-        toast.success('Prompt created successfully!');
+      if (res.success) {
+        toast.success('Public template published successfully!');
         setFormData(INITIAL_FORM_DATA);
         close();
+
+        // Refresh route automatically to show newly added template
+        router.refresh();
         if (onSuccessHandler) {
           onSuccessHandler();
         }
       } else {
-        toast.error(res?.error || 'Failed to create prompt.');
+        toast.error(res.error || 'Failed to publish template.');
       }
     } catch (error) {
-      console.error('Error creating prompt:', error);
-      toast.error('An unexpected error occurred. Please try again.');
+      console.error('Error creating template:', error);
+      toast.error('An unexpected error occurred.');
     } finally {
-      setIsFormSaving(false);
+      setIsSaving(false);
     }
   }
 
@@ -129,13 +155,13 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-2xl p-0 shadow-overlay sm:max-w-2xl">
         <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 py-4 text-left">
-          <DialogTitle className="text-xl tracking-tight">Create new prompt</DialogTitle>
+          <DialogTitle className="text-xl tracking-tight">Add Curated Template</DialogTitle>
           <DialogDescription>
-            Use{' '}
+            Publish a public template to the template marketplace. Use{' '}
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
               {'{{variable}}'}
             </code>{' '}
-            syntax to create dynamic input fields.
+            syntax for dynamic variables.
           </DialogDescription>
         </DialogHeader>
 
@@ -144,14 +170,14 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
             {/* Row 1: Title & Category */}
             <div className="grid gap-3.5 sm:grid-cols-[minmax(0,1fr)_180px]">
               <div className="grid gap-1.5">
-                <Label htmlFor="prompt-title">
+                <Label htmlFor="tpl-title">
                   Title <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="prompt-title"
+                  id="tpl-title"
                   value={formData.title}
                   onChange={(e) => handleFieldChange('title', e.target.value)}
-                  placeholder="e.g. Code Refactor & Explain"
+                  placeholder="e.g. Next.js Code Reviewer"
                   aria-invalid={!!titleError}
                   className="rounded-xl"
                 />
@@ -159,14 +185,12 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               </div>
 
               <div className="grid gap-1.5">
-                <Label htmlFor="prompt-category">Category</Label>
+                <Label htmlFor="tpl-category">Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(val) => {
-                    if (val) handleFieldChange('category', val as Category);
-                  }}
+                  onValueChange={(val) => val && handleFieldChange('category', val as Category)}
                 >
-                  <SelectTrigger id="prompt-category" className="w-full rounded-xl">
+                  <SelectTrigger id="tpl-category" className="rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="start" className="rounded-xl">
@@ -180,54 +204,79 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               </div>
             </div>
 
-            {/* Row 2: Short description */}
+            {/* Row 2: Author & Featured */}
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="tpl-author">Author</Label>
+                <Input
+                  id="tpl-author"
+                  value={formData.author}
+                  onChange={(e) => handleFieldChange('author', e.target.value)}
+                  placeholder="e.g. PromptVault Team"
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="tpl-featured"
+                  checked={formData.isFeatured}
+                  onChange={(e) => handleFieldChange('isFeatured', e.target.checked)}
+                  className="size-4 rounded border-border text-brand focus:ring-brand"
+                />
+                <Label htmlFor="tpl-featured" className="cursor-pointer">
+                  Feature on marketplace top list
+                </Label>
+              </div>
+            </div>
+
+            {/* Row 3: Description (Full Row) */}
             <div className="grid gap-1.5">
-              <Label htmlFor="prompt-desc">Short description</Label>
+              <Label htmlFor="tpl-desc">Description</Label>
               <Textarea
-                id="prompt-desc"
+                id="tpl-desc"
                 value={formData.description}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
-                placeholder="What does this prompt do?"
+                placeholder="Overview of what this template does..."
                 rows={2}
                 className="min-h-16 rounded-xl text-sm"
               />
             </div>
 
-            {/* Row 3: System instruction */}
+            {/* Row 4: System Instruction (Full Row) */}
             <div className="grid gap-1.5">
-              <Label htmlFor="prompt-system">System instruction (optional)</Label>
+              <Label htmlFor="tpl-system">System Instruction (optional)</Label>
               <Textarea
-                id="prompt-system"
+                id="tpl-system"
                 value={formData.system}
                 onChange={(e) => handleFieldChange('system', e.target.value)}
-                placeholder="e.g. You are a senior engineer."
+                placeholder="e.g. You are a senior software architect..."
                 rows={2}
                 className="min-h-16 rounded-xl text-sm"
               />
             </div>
 
-            {/* Row 4: Template */}
+            {/* Row 5: Prompt Template */}
             <div className="grid gap-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label htmlFor="prompt-template">
-                  Prompt template <span className="text-destructive">*</span>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tpl-template">
+                  Prompt Template <span className="text-destructive">*</span>
                 </Label>
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Sparkles className="size-3.5 text-brand" aria-hidden />
                   Auto-detects variables
                 </span>
               </div>
-
               <Textarea
-                id="prompt-template"
+                id="tpl-template"
                 value={formData.template}
                 onChange={(e) => handleFieldChange('template', e.target.value)}
-                placeholder="Explain {{concept}} in simple terms for a {{audience}}."
+                placeholder="Analyze this code snippet: {{code}}"
                 rows={4}
                 aria-invalid={!!templateError}
-                className="min-h-25 max-h-48 rounded-xl font-mono text-[13px] leading-relaxed"
+                className="min-h-25 max-h-48 rounded-xl font-mono text-[13px]"
               />
-
               {templateError ? (
                 <p className="text-xs text-destructive">{templateError}</p>
               ) : templateVariables.length > 0 ? (
@@ -246,17 +295,15 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               )}
             </div>
 
-            {/* Row 5: AI Provider & Model Target */}
+            {/* Row 6: AI Provider & Target Model */}
             <div className="grid gap-3.5 sm:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label htmlFor="prompt-provider">AI provider</Label>
+                <Label htmlFor="tpl-provider">AI Provider</Label>
                 <Select
                   value={formData.provider}
-                  onValueChange={(val) => {
-                    if (val) handleProviderChange(val as Provider);
-                  }}
+                  onValueChange={(val) => val && handleProviderChange(val as Provider)}
                 >
-                  <SelectTrigger id="prompt-provider" className="w-full rounded-xl">
+                  <SelectTrigger id="tpl-provider" className="w-full rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="start" className="rounded-xl">
@@ -268,15 +315,14 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid gap-1.5">
-                <Label htmlFor="prompt-model">Model target</Label>
+                <Label htmlFor="tpl-model">Model Target</Label>
                 <Select
                   value={formData.model}
-                  onValueChange={(val) => {
-                    if (val) handleFieldChange('model', val);
-                  }}
+                  onValueChange={(val) => val && handleFieldChange('model', val)}
                 >
-                  <SelectTrigger id="prompt-model" className="w-full rounded-xl">
+                  <SelectTrigger id="tpl-model" className="w-full rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="start" className="rounded-xl">
@@ -291,12 +337,12 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
             </div>
           </div>
 
-          <DialogFooter className="m-0 shrink-0 flex justify-start border-t border-border bg-surface-raised/60 px-6 py-3.5 gap-2 md:items-center md:justify-end">
+          <DialogFooter className="m-0 shrink-0 border-t border-border bg-surface-raised/60 px-6 py-3.5">
             <Button type="button" variant="outline" onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" variant="brand" disabled={isFormSaving}>
-              {isFormSaving ? 'Saving…' : 'Save prompt'}
+            <Button type="submit" variant="brand" disabled={isSaving}>
+              {isSaving ? 'Publishing…' : 'Publish Template'}
             </Button>
           </DialogFooter>
         </form>

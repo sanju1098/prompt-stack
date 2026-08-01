@@ -15,7 +15,7 @@ declare global {
 }
 
 // Guarantee `cached` is typed as `MongooseCache` (never undefined)
-let cached: MongooseCache = global.mongooseCache || {
+const cached: MongooseCache = global.mongooseCache || {
   conn: null,
   promise: null,
 };

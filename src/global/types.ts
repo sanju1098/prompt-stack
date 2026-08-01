@@ -1,6 +1,6 @@
 // ─── Base & Shared Primitives ───────────────────────────────────────────────
 
-export type Provider = 'gemini' | 'groq' | 'openai';
+export type Provider = 'gemini' | 'groq';
 
 export type Category = 'Coding' | 'Writing' | 'Marketing' | 'Summarization' | 'General';
 

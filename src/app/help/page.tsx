@@ -1,6 +1,10 @@
-import { BookOpen, KeyRound, LifeBuoy, Rocket, Variable, Wand2 } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { BookOpen, KeyRound, Rocket, Variable, Wand2 } from 'lucide-react';
+
+export const metadata = {
+  title: 'Help & Documentation | PromptStack',
+  description:
+    'Find guides, tutorials, and answers to help you organize, run, and scale your AI prompt workflows with PromptVault.',
+};
 
 export default function Help() {
   const GUIDES = [

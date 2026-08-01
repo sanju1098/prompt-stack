@@ -1,5 +1,6 @@
 'use server';
 
+import mongoose from 'mongoose';
 import type { CreatePromptAPIInput } from '@/global/types';
 import dbConnect from '@/lib/database';
 import { extractVariables, hydrateTemplate } from '@/lib/parser';
@@ -104,6 +105,42 @@ export async function runPromptAction(promptId: string, variableValues: Record<s
     return {
       success: false,
       error: error?.message || 'Execution failed. Please check your API keys.',
+    };
+  }
+}
+
+export async function getPromptById(id: string) {
+  try {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return {
+        success: false,
+        error: 'Invalid Prompt ID format. Please check the URL.',
+        isInvalidId: true,
+      };
+    }
+
+    await dbConnect();
+    const prompt = await Prompt.findById(id).lean();
+
+    if (!prompt) {
+      return {
+        success: false,
+        error: 'Prompt not found in database.',
+        isInvalidId: false,
+      };
+    }
+
+    const serializedPrompt = JSON.parse(JSON.stringify(prompt));
+    return {
+      success: true,
+      data: serializedPrompt,
+    };
+  } catch (error) {
+    console.error('Error fetching prompt by ID:', error);
+    return {
+      success: false,
+      error: 'An unexpected error occurred while fetching the prompt.',
+      isInvalidId: false,
     };
   }
 }
