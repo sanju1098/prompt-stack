@@ -49,7 +49,7 @@ interface TemplateFormData {
 
 const INITIAL_FORM_DATA: TemplateFormData = {
   title: '',
-  category: 'Coding',
+  category: 'General',
   description: '',
   system: '',
   template: '',

@@ -1,6 +1,6 @@
 'use server';
 
-import dbConnect from '@/lib/database';
+import databaseConnect from '@/lib/database';
 import { extractVariables } from '@/lib/parser';
 import Prompt from '@/models/Prompt';
 import Template from '@/models/Templates';
@@ -10,7 +10,7 @@ import Template from '@/models/Templates';
  */
 export async function getTemplatesAction(searchQuery?: string, category?: string) {
   try {
-    await dbConnect();
+    await databaseConnect();
 
     const query: Record<string, any> = {};
 
@@ -49,7 +49,7 @@ export async function getTemplatesAction(searchQuery?: string, category?: string
  */
 export async function forkTemplateAction(templateId: string) {
   try {
-    await dbConnect();
+    await databaseConnect();
 
     const templateDoc = await Template.findById(templateId);
     if (!templateDoc) {
@@ -104,7 +104,7 @@ export async function forkTemplateAction(templateId: string) {
  */
 export async function seedTemplatesAction(initialTemplates: any[]) {
   try {
-    await dbConnect();
+    await databaseConnect();
 
     const count = await Template.countDocuments();
     if (count > 0) {
@@ -145,7 +145,7 @@ export async function createTemplateAction(data: {
   };
 }) {
   try {
-    await dbConnect();
+    await databaseConnect();
 
     const newTemplate = new Template({
       ...data,
@@ -183,7 +183,7 @@ export async function getTemplateById(id: string) {
       };
     }
 
-    await dbConnect();
+    await databaseConnect();
     const template = await Template.findById(id).lean();
 
     if (!template) {

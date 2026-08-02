@@ -6,7 +6,6 @@ export type {
   LLMProviderConfig,
   ModelConfig,
   Prompt,
-  TemplatePrompt,
   CreatePromptAPIInput,
   ActionResult,
   CreatePromptDialogProps,

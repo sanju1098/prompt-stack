@@ -31,7 +31,7 @@ import { extractVariables } from '@/lib/helpers';
 export function CreatePromptDialog({ open, close, onSuccessHandler }: CreatePromptDialogProps) {
   const INITIAL_FORM_DATA: PromptFormData = {
     title: '',
-    category: 'Coding',
+    category: 'General',
     description: '',
     system: '',
     template: '',
@@ -111,6 +111,10 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
         toast.success('Prompt created successfully!');
         setFormData(INITIAL_FORM_DATA);
         close();
+
+        // Notify any mounted component (like Home) to refetch data
+        window.dispatchEvent(new Event('prompt-created'));
+
         if (onSuccessHandler) {
           onSuccessHandler();
         }

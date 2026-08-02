@@ -1,8 +1,8 @@
 // ─── Base & Shared Primitives ───────────────────────────────────────────────
 
-export type Provider = 'gemini' | 'groq';
+export type Provider = 'gemini' | 'groq' | string;
 
-export type Category = 'Coding' | 'Writing' | 'Marketing' | 'Summarization' | 'General';
+export type Category = 'Coding' | 'Writing' | 'Marketing' | 'Summarization' | 'General' | string;
 
 export type Theme = 'light' | 'dark';
 
@@ -23,40 +23,46 @@ export interface ModelConfig {
   maxTokens: number;
 }
 
-// ─── Prompt Types ──────────────────────────────────────────────────────────
+// ─── Shared Base Prompt Interface ──────────────────────────────────────────
 
-/** Server-side prompt representation matching the MongoDB/Mongoose schema. */
-export interface Prompt {
+export interface BasePromptItem {
   _id: string;
   title: string;
   description?: string;
-  category: string;
-  tags: string[];
+  category: Category;
+  tags?: string[];
   template: string;
-  variables: string[];
+  variables?: string[];
   systemInstruction?: string;
   modelConfig: ModelConfig;
-  executionCount: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | { $date: string };
+  updatedAt?: string | { $date: string };
 }
 
-/** Community / curated template prompt (static data, not from MongoDB). */
-export interface TemplatePrompt {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  provider: Provider;
-  model: string;
-  template: string;
-  uses: number;
-  author: string;
+/** Workspace Prompt saved by the user */
+export interface Prompt extends BasePromptItem {
+  executionCount: number;
+}
+
+/** Curated / Public Template Document */
+export interface ITemplateDocument extends BasePromptItem {
+  author?: string;
+  uses?: number;
+  isFeatured?: boolean;
+}
+
+// ─── Discriminated Card Props for Reusability ──────────────────────────────
+
+export interface PromptCardProps {
+  item: BasePromptItem;
+  topBadge?: React.ReactNode;
+  metric: React.ReactNode;
+  primaryAction: React.ReactNode;
+  secondaryAction?: React.ReactNode;
 }
 
 // ─── Action / API Types ────────────────────────────────────────────────────
 
-/** Input shape for creating a prompt via the server action. */
 export interface CreatePromptAPIInput {
   title: string;
   description?: string;
@@ -67,7 +73,6 @@ export interface CreatePromptAPIInput {
   modelConfig: ModelConfig;
 }
 
-/** Generic server-action result wrapper. */
 export interface ActionResult<T = unknown> {
   success: boolean;
   error?: string;
@@ -99,20 +104,13 @@ export interface EmptyStateProps {
   onAction?: () => void;
 }
 
-export interface PromptCardProps {
-  prompt: Prompt;
-  onOpen: (p: Prompt) => void;
-}
-
 export interface PlaygroundSheetProps {
   prompt: Prompt | null;
   onOpenChange: (open: boolean) => void;
 }
 
-/** Playground execution status. */
 export type PlaygroundStatus = 'idle' | 'loading' | 'done' | 'error';
 
-/** Input shape for running a prompt via server action. */
 export interface RunPromptResult {
   success: boolean;
   output?: string;
@@ -120,3 +118,18 @@ export interface RunPromptResult {
   executionTimeMs?: number;
   error?: string;
 }
+
+// ----------------------- Stats -----------------------
+export interface WorkspaceStats {
+  totalPrompts: number;
+  totalTemplates: number;
+  totalRuns: number;
+  totalTemplateUses: number;
+  providersCount: number;
+  // Future extensions
+  totalFavorites?: number;
+  totalUsers?: number;
+}
+
+export type GetStatsResult =
+  { success: true; stats: WorkspaceStats } | { success: false; error: string };

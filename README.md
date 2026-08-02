@@ -1,57 +1,60 @@
 # PromptStack
 
-PromptStack is a modern AI prompt library and playground built for developers, prompt engineers, and creators who want to organize, test, and reuse prompts in one place. Instead of keeping prompts scattered across notes, chats, or text files, PromptStack gives you a centralized workspace to build reusable templates, inject variables, choose models, and run them live.
+PromptStack is an AI prompt management platform built with Next.js, React, and MongoDB. It helps developers, prompt engineers, and creators store reusable prompt templates, run live prompt experiments, and manage curated templates from one workspace.
 
-## What PromptStack can do
+## What PromptStack does
 
-PromptStack helps you:
+PromptStack lets you:
 
-- Create and save reusable prompt templates
-- Use dynamic placeholders such as `{{topic}}`, `{{audience}}`, or `{{tone}}`
-- Search and filter prompts by category or keyword
-- Run prompts directly in the browser against Gemini or Groq
-- Add system instructions and model settings for each prompt
-- Store prompts in MongoDB for fast reuse and iteration
-- Test and refine prompts without switching between multiple tools
+- Create, save, and manage reusable prompt templates
+- Auto-detect dynamic variables with `{{variable}}` syntax
+- Search and filter prompts by category, title, or description
+- Run prompts live using Gemini or Groq providers
+- Add optional system instructions per prompt
+- View prompt details, execution count, and integration code snippets
+- Fork public templates into your personal prompt library
+- Track workspace stats for prompts, templates, runs, and providers
 
-## Core features
+## Key features
 
-- Prompt library with search and category filters
-- Dynamic variable detection from template syntax
-- Live playground for filling values and executing prompts
-- Provider and model selection for Gemini and Groq
-- Structured prompt storage with metadata and execution tracking
-- Clean, modern UI built with Next.js and shadcn/ui
+- Prompt library with live search, category filters, and skeleton loading states
+- Built-in templates marketplace with featured templates and fork support
+- Prompt detail pages with hydrated template preview and code snippets
+- Dynamic variable extraction and interactive input generation
+- Multi-provider support for Gemini and Groq models
+- Workspace analytics for total prompts, templates, runs, and provider count
+- Theme toggle and responsive UI with shadcn/ui components
 
-## Why it exists
+## Supported routes
 
-PromptStack makes prompt development feel more like working with a real product. It is useful for:
-
-- Developers prototyping prompts for AI apps
-- Prompt engineers comparing outputs across models
-- Content teams reusing prompt templates safely
-- Anyone who wants a faster, cleaner workflow for LLM testing
+- `/` — Prompt library dashboard
+- `/templates` — Curated template marketplace
+- `/help` — Documentation and feature guides
+- `/:id/prompt` — Prompt detail page with integration snippets
+- `/:id/template` — Template detail page and fork action
 
 ## Tech stack
 
-- Next.js
-- React
-- MongoDB + Mongoose
-- Tailwind CSS
+- Next.js 16.2.12
+- React 19.2.4
+- Tailwind CSS 4
 - shadcn/ui
-- Gemini API and Groq API
+- MongoDB + Mongoose
+- `@google/genai` for Gemini
+- `groq-sdk` for Groq
+- Sonner for toast notifications
 
 ## Getting started
 
 ### Prerequisites
 
 - Node.js 20 or newer
-- A MongoDB instance
-- API keys for Gemini and/or Groq
+- MongoDB instance or MongoDB Atlas cluster
+- Gemini API key and/or Groq API key
 
-### Environment variables
+### Required environment variables
 
-Create a `.env.local` file in the project root with the following values:
+Create a `.env.local` file in the project root with:
 
 ```env
 MONGODB_URI=your_mongodb_connection_string
@@ -59,26 +62,34 @@ GEMINI_API_KEY=your_gemini_api_key
 GROQ_API_KEY=your_groq_api_key
 ```
 
-### Install and run
+### Install dependencies and start development server
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open http://localhost:3000 in your browser.
+Open http://localhost:3000 in your browser.
+
+## Available scripts
+
+- `npm run dev` — start the Next.js development server
+- `npm run build` — build the app for production
+- `npm run start` — run the production build
+- `npm run lint` — run ESLint
+- `npm run format` — format sources with Prettier
 
 ## Project structure
 
-- `app/` - pages, layout, and server actions
-- `components/` - UI and interactive prompt features
-- `lib/` - database, parsing, and helper utilities
-- `models/` - MongoDB schema for prompts
-- `global/` - shared types, providers, and constants
+- `app/` — page routes, server components, and route actions
+- `src/components/` — reusable UI components and dialogs
+- `src/global/` — shared types, constants, and provider configuration
+- `src/lib/` — helpers, parser utilities, database connection, and client code
+- `src/models/` — Mongoose schemas for prompts and templates
+- `src/public/` — static assets and favicon
 
-## Use cases
+## Notes
 
-- Rapid prompt prototyping
-- Reusable prompt templates for projects and teams
-- Testing prompts before integrating them into apps
-- Managing prompt versions and execution experiments in one place
+- Prompt templates can include `{{variableName}}` placeholders. The app auto-extracts these variables and exposes them as interactive inputs.
+- Public templates can be forked into the user prompt library, incrementing the template's usage counter.
+- Workspace stats are computed from MongoDB aggregates and include prompts, templates, runs, and active providers.

@@ -1,17 +1,20 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Brain, Layers, Play, Search, Sparkles } from 'lucide-react';
+import { Brain, ExternalLink, Layers, Play, Search, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { getPromptsAction } from '@/app/actions/promptActions';
+import { getWorkspaceStatsAction } from '@/app/actions/statsActions';
 import { CreatePromptDialog } from '@/components/CreatePromptDialog';
 import { EmptyState } from '@/components/EmptyState';
 import { PlaygroundSheet } from '@/components/PlaygroundSheet';
 import { PromptCard } from '@/components/PromptCard';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CATEGORIES } from '@/global/constants';
-import type { Category, Prompt } from '@/global/types';
+import type { Category, Prompt, WorkspaceStats } from '@/global/types';
 import { useDebounce } from '@/hooks/useDebounce';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +27,11 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'All'>('All');
   const [createOpen, setCreateOpen] = useState(false);
-  const [active, setActive] = useState<Prompt | null>(null);
+  const [activePrompt, setActivePrompt] = useState<Prompt | null>(null);
+
+  // Stats State
+  const [statsData, setStatsData] = useState<WorkspaceStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -45,9 +52,44 @@ export default function Home() {
     }
   }, [debouncedSearchQuery, filter]);
 
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await getWorkspaceStatsAction();
+      if (res.success) {
+        setStatsData(res.stats);
+      } else {
+        toast.error(res.error || 'Failed to load statistics.');
+      }
+    } catch (error) {
+      console.error('Failed to fetch workspace stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // 3. Combined Handler: Refreshes both list and stats on prompt creation
+  const handleRefreshAll = useCallback(() => {
+    void fetchPrompts();
+    void fetchStats();
+  }, [fetchPrompts, fetchStats]);
+
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  useEffect(() => {
+    const handlePromptCreated = () => {
+      handleRefreshAll();
+    };
+
+    window.addEventListener('prompt-created', handlePromptCreated);
+    return () => window.removeEventListener('prompt-created', handlePromptCreated);
+  }, [handleRefreshAll]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +98,28 @@ export default function Home() {
 
   const stats = useMemo(
     () => [
-      { label: 'Total Prompts', value: loading ? '…' : prompts.length, icon: Layers },
-      { label: 'Total runs', value: 100, icon: Play },
-      { label: 'Providers', value: 2, icon: Brain },
+      {
+        label: 'Total Prompts',
+        value: statsLoading || !statsData ? '…' : statsData.totalPrompts.toLocaleString(),
+        icon: Layers,
+      },
+      {
+        label: 'Total Templates',
+        value: statsLoading || !statsData ? '…' : statsData.totalTemplates.toLocaleString(),
+        icon: Play,
+      },
+      {
+        label: 'Total runs',
+        value: statsLoading || !statsData ? '…' : statsData.totalRuns.toLocaleString(),
+        icon: Play,
+      },
+      {
+        label: 'Providers',
+        value: statsLoading || !statsData ? '…' : statsData.providersCount.toLocaleString(),
+        icon: Brain,
+      },
     ],
-    [loading, prompts.length]
+    [statsLoading, statsData]
   );
 
   const emptyDescription =
@@ -93,7 +152,10 @@ export default function Home() {
         </section>
 
         {/* Stats Row */}
-        <section aria-label="Workspace stats" className="mt-10 grid gap-4 sm:grid-cols-3">
+        <section
+          aria-label="Workspace stats"
+          className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {stats.map(({ label, value, icon: Icon }) => (
             <div
               key={label}
@@ -185,7 +247,35 @@ export default function Home() {
                 />
               </div>
             ) : (
-              prompts.map((p) => <PromptCard key={p._id} prompt={p} onOpen={setActive} />)
+              prompts.map((p) => (
+                <PromptCard
+                  key={p._id}
+                  item={p}
+                  metric={
+                    <p>
+                      <span className="font-semibold text-foreground">
+                        {(p.executionCount ?? 0).toLocaleString()}
+                      </span>{' '}
+                      runs
+                    </p>
+                  }
+                  primaryAction={
+                    <Button size="sm" variant="secondary" onClick={() => setActivePrompt(p)}>
+                      <Play className="size-3.5 mr-1.5" aria-hidden="true" />
+                      Playground
+                    </Button>
+                  }
+                  secondaryAction={
+                    <Link
+                      href={`/${p._id}/prompt`}
+                      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}
+                    >
+                      <ExternalLink className="size-3.5" aria-hidden="true" />
+                      View in detail
+                    </Link>
+                  }
+                />
+              ))
             )}
           </div>
         </section>
@@ -194,10 +284,13 @@ export default function Home() {
       <CreatePromptDialog
         open={createOpen}
         close={() => setCreateOpen(false)}
-        onSuccessHandler={fetchPrompts}
+        onSuccessHandler={handleRefreshAll}
       />
 
-      <PlaygroundSheet prompt={active} onOpenChange={(open) => !open && setActive(null)} />
+      <PlaygroundSheet
+        prompt={activePrompt}
+        onOpenChange={(open) => !open && setActivePrompt(null)}
+      />
     </>
   );
 }

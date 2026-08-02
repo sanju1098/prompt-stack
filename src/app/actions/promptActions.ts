@@ -2,18 +2,18 @@
 
 import mongoose from 'mongoose';
 import type { CreatePromptAPIInput } from '@/global/types';
-import dbConnect from '@/lib/database';
+import databaseConnect from '@/lib/database';
 import { extractVariables, hydrateTemplate } from '@/lib/parser';
-import Prompt from '@/models/Prompt';
+import PromptModel from '@/models/Prompt';
 import { geminiClient, groqClient } from './apiKeys';
 
 /** Creates and saves a new prompt in MongoDB. */
 export async function createPromptAction(input: CreatePromptAPIInput) {
   try {
-    await dbConnect();
+    await databaseConnect();
     const detectedVariables = extractVariables(input.template); // Auto-detect variables from the template string
 
-    const newPrompt = await Prompt.create({
+    const newPrompt = await PromptModel.create({
       ...input,
       variables: detectedVariables,
       tags: input.tags || [],
@@ -29,7 +29,7 @@ export async function createPromptAction(input: CreatePromptAPIInput) {
 /** Fetches all prompts from MongoDB with optional search and filtering. */
 export async function getPromptsAction(searchQuery?: string, category?: string) {
   try {
-    await dbConnect();
+    await databaseConnect();
     const query: any = {};
 
     if (searchQuery && searchQuery.trim() !== '') {
@@ -40,7 +40,7 @@ export async function getPromptsAction(searchQuery?: string, category?: string) 
     if (category && category !== 'All') {
       query.category = category;
     }
-    const prompts = await Prompt.find(query).sort({ createdAt: -1 }).lean();
+    const prompts = await PromptModel.find(query).sort({ createdAt: -1 }).lean();
     return { success: true, prompts: JSON.parse(JSON.stringify(prompts)) };
   } catch (error: any) {
     console.error('Error fetching prompts:', error);
@@ -52,8 +52,8 @@ export async function getPromptsAction(searchQuery?: string, category?: string) 
 export async function runPromptAction(promptId: string, variableValues: Record<string, string>) {
   const startTime = Date.now();
   try {
-    await dbConnect();
-    const promptDoc = await Prompt.findById(promptId);
+    await databaseConnect();
+    const promptDoc = await PromptModel.findById(promptId);
     if (!promptDoc) {
       return { success: false, error: 'Prompt not found' };
     }
@@ -93,7 +93,7 @@ export async function runPromptAction(promptId: string, variableValues: Record<s
     const executionTimeMs = Date.now() - startTime;
 
     // Increment execution count in MongoDB asynchronously
-    await Prompt.findByIdAndUpdate(promptId, { $inc: { executionCount: 1 } });
+    await PromptModel.findByIdAndUpdate(promptId, { $inc: { executionCount: 1 } });
     return {
       success: true,
       output: generatedText,
@@ -119,8 +119,8 @@ export async function getPromptById(id: string) {
       };
     }
 
-    await dbConnect();
-    const prompt = await Prompt.findById(id).lean();
+    await databaseConnect();
+    const prompt = await PromptModel.findById(id).lean();
 
     if (!prompt) {
       return {

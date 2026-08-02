@@ -84,7 +84,7 @@ const PromptSchema = new Schema<IPrompt>(
 PromptSchema.index({ title: 'text', description: 'text', template: 'text' });
 
 // Ensure model re-use during Next.js hot reloading
-const Prompt: Model<IPrompt> =
+const PromptModel: Model<IPrompt> =
   mongoose.models.Prompt || mongoose.model<IPrompt>('Prompt', PromptSchema);
 
-export default Prompt;
+export default PromptModel;

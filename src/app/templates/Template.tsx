@@ -8,24 +8,13 @@ import { toast } from 'sonner';
 import { forkTemplateAction } from '@/app/actions/templateActions';
 import { CreateTemplateDialog } from '@/components/CreateTemplateDialog';
 import { EmptyState } from '@/components/EmptyState';
+import { PromptCard } from '@/components/PromptCard';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CATEGORIES } from '@/global/constants';
-import type { Category } from '@/global/types';
+import type { Category, ITemplateDocument } from '@/global/types';
 import { cn } from '@/lib/utils';
-
-export interface ITemplateDocument {
-  _id: string;
-  title: string;
-  description?: string;
-  template: string;
-  category: Category | string;
-  author: string;
-  uses: number;
-  tags?: string[];
-  isFeatured?: boolean;
-}
 
 interface TemplatesProps {
   initialTemplates: ITemplateDocument[];
@@ -141,90 +130,70 @@ export function Templates({ initialTemplates }: TemplatesProps) {
           <EmptyState
             title="No templates match"
             description="Try selecting another category or typing a broader search term."
+            actionLabel="New Template"
+            onAction={() => setIsTemplateDialog(true)}
           />
         ) : (
-          visibleTemplates.map((t) => {
-            const isForking = forkingId === t._id;
+          visibleTemplates.map((template) => {
+            const isForking = forkingId === template._id;
 
             return (
-              <article
-                key={t._id}
-                className={cn(
-                  'group flex flex-col justify-between rounded-2xl surface-panel p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift',
-                  t.isFeatured &&
-                    'border-amber-500/35 bg-linear-to-b from-amber-500/5 via-surface to-surface shadow-xs2'
-                )}
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="text-base font-semibold tracking-tight">{t.title}</h2>
-                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                      {t.isFeatured && (
-                        <Badge
-                          variant="outline"
-                          className="gap-1 rounded-full border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium"
-                        >
-                          <Star className="size-3 fill-amber-500 text-amber-500" />
-                          Featured
-                        </Badge>
-                      )}
-                      <Badge variant="secondary" className="rounded-full">
-                        {t.category}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="min-w-0">
-                    <div className="flex items-start gap-2">
-                      <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug tracking-tight">
-                        {t.title}
-                      </h3>
-                    </div>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                      {t.description || 'No description provided.'}
+              <PromptCard
+                key={template._id}
+                item={template}
+                topBadge={
+                  template.isFeatured ? (
+                    <Badge
+                      variant="outline"
+                      className="gap-1 rounded-full border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400"
+                    >
+                      <Star className="size-3 fill-amber-500 text-amber-500" aria-hidden="true" />
+                      <span>Featured</span>
+                    </Badge>
+                  ) : null
+                }
+                metric={
+                  <>
+                    <Users className="size-3.5" aria-hidden="true" />
+                    <p>
+                      <span className="font-semibold text-foreground">
+                        {(template.uses ?? 0).toLocaleString()}
+                      </span>{' '}
+                      uses
                     </p>
-                  </div>
-
-                  <pre className="mt-4 line-clamp-3 whitespace-pre-wrap rounded-xl bg-muted/60 p-3 font-mono text-xs text-muted-foreground">
-                    {t.template}
-                  </pre>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Users className="size-3.5" aria-hidden />
-                    {(t.uses || 0).toLocaleString()} uses
-                  </span>
-
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={isForking}
-                      onClick={() => handleFork(t._id, t.title)}
-                    >
-                      {isForking ? (
-                        <>
-                          <Loader2 className="mr-1.5 size-3.5 animate-spin" aria-hidden />
-                          Forking...
-                        </>
-                      ) : (
-                        <>
-                          <GitFork className="size-3.5" aria-hidden="true" />
-                          <span>Fork Template</span>
-                        </>
-                      )}
-                    </Button>
-                    <Link
-                      href={`/${t._id}/template`}
-                      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-2')}
-                    >
-                      <ExternalLink aria-hidden />
-                      View in detail
-                    </Link>
-                  </div>
-                </div>
-              </article>
+                  </>
+                }
+                primaryAction={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={isForking}
+                    onClick={() => handleFork(template._id, template.title)}
+                    className="gap-1.5"
+                  >
+                    {isForking ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        <span>Forking…</span>
+                      </>
+                    ) : (
+                      <>
+                        <GitFork className="size-3.5" aria-hidden="true" />
+                        <span>Use Template</span>
+                      </>
+                    )}
+                  </Button>
+                }
+                secondaryAction={
+                  <Link
+                    href={`/${template._id}/template/`}
+                    className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}
+                  >
+                    <ExternalLink className="size-3.5" aria-hidden="true" />
+                    View in detail
+                  </Link>
+                }
+              />
             );
           })
         )}

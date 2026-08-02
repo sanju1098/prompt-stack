@@ -46,7 +46,7 @@ const TemplateSchema = new Schema<ITemplate>(
 );
 
 // Reuse existing model or compile a new one (prevents Next.js hot-reload compilation errors)
-const Template: Model<ITemplate> =
+const TemplateModel: Model<ITemplate> =
   mongoose.models.Template || mongoose.model<ITemplate>('Template', TemplateSchema);
 
-export default Template;
+export default TemplateModel;
