@@ -1,11 +1,12 @@
-import { AlertTriangle, ArrowLeft, Code2, Cpu, FileX, Layers } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Code2, Cpu, FileX, Layers, Play } from 'lucide-react';
 import Link from 'next/link';
 import { getPromptById } from '@/app/actions/promptActions';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { nodeSnippet, pythonSnippet } from '../../../lib/codeSnippet';
+import { EditPromptButton } from './EditpromptPage';
 
 export default async function PromptPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -43,7 +44,9 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
     );
   }
 
+  const prompt = result.data;
   const {
+    _id,
     category,
     modelConfig = {},
     title,
@@ -52,25 +55,36 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
     systemInstruction,
     variables = [],
     executionCount = 0,
-  } = result.data;
+  } = prompt;
 
-  const tsCode = nodeSnippet(modelConfig.provider, result.data);
-  const pyCode = pythonSnippet(modelConfig.provider, result.data);
+  const tsCode = nodeSnippet(modelConfig.provider, prompt);
+  const pyCode = pythonSnippet(modelConfig.provider, prompt);
 
   return (
     <div className="mx-auto max-w-5xl p-6 md:p-10 space-y-8 animate-rise">
-      {/* Navigation Header */}
-      <div>
+      {/* Top Header: Navigation (Left) + Primary Actions (Right) */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Link
           href="/"
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'sm' }),
-            'group -ml-2 text-muted-foreground hover:text-foreground hover:bg-surface-raised hover:underline transition-all duration-200'
+            'group -ml-2 text-muted-foreground hover:text-foreground hover:bg-surface-raised transition-all duration-200'
           )}
         >
           <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />{' '}
           <span className="text-sm font-medium tracking-tight">Back to Prompt Library</span>
         </Link>
+
+        <div className="flex items-center gap-2">
+          <EditPromptButton prompt={prompt} />
+          <Link
+            href={`/${_id}/playground`}
+            className={cn(buttonVariants({ variant: 'brand', size: 'sm' }), 'rounded-xl gap-1.5')}
+          >
+            <Play className="size-3.5" />
+            Test in Playground
+          </Link>
+        </div>
       </div>
 
       {/* Main Metadata Header */}
@@ -136,6 +150,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      {/* Prompt Template */}
       <div className="grid grid-cols-1 gap-8">
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
@@ -145,12 +160,13 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
             </h2>
           </div>
 
-          <pre className="whitespace-pre-wrap wrap-break-word rounded-2xl border border-border bg-surface-raised p-5 font-mono text-sm leading-relaxed text-foreground shadow-xs2">
+          <pre className="whitespace-pre-wrap break-words rounded-2xl border border-border bg-surface-raised p-5 font-mono text-sm leading-relaxed text-foreground shadow-xs2">
             {template}
           </pre>
         </div>
       </div>
 
+      {/* System Instruction */}
       {systemInstruction && (
         <>
           <hr />
@@ -163,7 +179,7 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
                 </h2>
               </div>
 
-              <pre className="whitespace-pre-wrap wrap-break-word rounded-2xl border border-border bg-surface-raised p-5 font-mono text-sm leading-relaxed text-foreground shadow-xs2">
+              <pre className="whitespace-pre-wrap break-words rounded-2xl border border-border bg-surface-raised p-5 font-mono text-sm leading-relaxed text-foreground shadow-xs2">
                 {systemInstruction}
               </pre>
             </div>
@@ -173,11 +189,11 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
 
       <hr />
 
+      {/* Integration Snippets */}
       <div className="space-y-1.5 mb-4">
-        {/* Header Row */}
         <div className="flex items-center justify-between">
           <h2 className="text-md font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Code2 className="h-4 w-4 " />
+            <Code2 className="h-4 w-4" />
             Integration Snippets
           </h2>
           <span className="rounded-md border border-border bg-surface-raised px-2 py-0.5 font-mono text-xs text-muted-foreground">
@@ -185,13 +201,12 @@ export default async function PromptPage({ params }: { params: Promise<{ id: str
           </span>
         </div>
 
-        {/* Description Subtitle */}
         <p className="text-sm leading-relaxed text-muted-foreground">
           Copy ready-to-use boilerplate code for{' '}
           <strong className="font-semibold text-foreground">{title}</strong> using the target SDK.
         </p>
       </div>
-      {/* Code Integration Section */}
+
       <Tabs defaultValue="typescript" className="w-full space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <TabsList>

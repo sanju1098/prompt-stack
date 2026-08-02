@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { createPromptAction } from '@/app/actions/promptActions';
+import { createPromptAction, updatePromptAction } from '@/app/actions/promptActions';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,10 +25,25 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { CATEGORIES } from '@/global/constants';
 import { LLM_PROVIDERS } from '@/global/providers';
-import type { Category, CreatePromptDialogProps, PromptFormData, Provider } from '@/global/types';
+import type {
+  Category,
+  CreatePromptDialogProps,
+  Prompt,
+  PromptFormData,
+  Provider,
+} from '@/global/types';
 import { extractVariables } from '@/lib/helpers';
 
-export function CreatePromptDialog({ open, close, onSuccessHandler }: CreatePromptDialogProps) {
+interface ExtendedPromptDialogProps extends CreatePromptDialogProps {
+  promptToEdit?: Prompt | null;
+}
+
+export function CreatePromptDialog({
+  open,
+  close,
+  promptToEdit,
+  onSuccessHandler,
+}: ExtendedPromptDialogProps) {
   const INITIAL_FORM_DATA: PromptFormData = {
     title: '',
     category: 'General',
@@ -43,14 +58,28 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
   const [showErrors, setShowErrors] = useState(false);
   const [isFormSaving, setIsFormSaving] = useState(false);
 
-  // Reset form state whenever the dialog closes
+  const isEditMode = Boolean(promptToEdit?._id);
+
+  // Populate form if promptToEdit is passed; otherwise reset
   useEffect(() => {
-    if (!open) {
-      setFormData(INITIAL_FORM_DATA);
+    if (open) {
+      if (promptToEdit) {
+        setFormData({
+          title: promptToEdit.title || '',
+          category: (promptToEdit.category as Category) || 'General',
+          description: promptToEdit.description || '',
+          system: promptToEdit.systemInstruction || '',
+          template: promptToEdit.template || '',
+          provider: (promptToEdit.modelConfig?.provider as Provider) || 'gemini',
+          model: promptToEdit.modelConfig?.modelName || 'gemini-2.5-flash',
+        });
+      } else {
+        setFormData(INITIAL_FORM_DATA);
+      }
       setShowErrors(false);
       setIsFormSaving(false);
     }
-  }, [open]);
+  }, [open, promptToEdit]);
 
   const templateVariables = useMemo(() => extractVariables(formData.template), [formData.template]);
 
@@ -59,7 +88,6 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     [formData.provider]
   );
 
-  // Validation checks
   const isTitleInvalid = !formData.title.trim();
   const isTemplateInvalid = !formData.template.trim();
 
@@ -81,7 +109,6 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     }));
   }
 
-  // Form submission handler with try/catch
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -93,36 +120,39 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     setIsFormSaving(true);
 
     try {
-      const res = await createPromptAction({
-        title: formData?.title,
-        description: formData?.description,
-        category: formData?.category,
-        template: formData?.template,
-        systemInstruction: formData?.system,
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        template: formData.template,
+        systemInstruction: formData.system,
         modelConfig: {
-          provider: formData?.provider,
-          modelName: formData?.model,
+          provider: formData.provider,
+          modelName: formData.model,
           temperature: 0.7,
           maxTokens: 1024,
         },
-      });
+      };
+
+      const res =
+        isEditMode && promptToEdit?._id
+          ? await updatePromptAction(promptToEdit._id, payload)
+          : await createPromptAction(payload);
 
       if (res?.success) {
-        toast.success('Prompt created successfully!');
-        setFormData(INITIAL_FORM_DATA);
+        toast.success(isEditMode ? 'Prompt updated successfully!' : 'Prompt created successfully!');
         close();
 
-        // Notify any mounted component (like Home) to refetch data
-        window.dispatchEvent(new Event('prompt-created'));
+        window.dispatchEvent(new Event(isEditMode ? 'prompt-updated' : 'prompt-created'));
 
         if (onSuccessHandler) {
           onSuccessHandler();
         }
       } else {
-        toast.error(res?.error || 'Failed to create prompt.');
+        toast.error(res?.error || `Failed to ${isEditMode ? 'update' : 'create'} prompt.`);
       }
     } catch (error) {
-      console.error('Error creating prompt:', error);
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} prompt:`, error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsFormSaving(false);
@@ -133,7 +163,9 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-2xl p-0 shadow-overlay sm:max-w-2xl">
         <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 py-4 text-left">
-          <DialogTitle className="text-xl tracking-tight">Create new prompt</DialogTitle>
+          <DialogTitle className="text-xl tracking-tight">
+            {isEditMode ? 'Edit prompt' : 'Create new prompt'}
+          </DialogTitle>
           <DialogDescription>
             Use{' '}
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
@@ -145,7 +177,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="grid flex-1 gap-3.5 overflow-y-auto px-6 py-4">
-            {/* Row 1: Title & Category */}
+            {/* Title & Category */}
             <div className="grid gap-3.5 sm:grid-cols-[minmax(0,1fr)_180px]">
               <div className="grid gap-1.5">
                 <Label htmlFor="prompt-title">
@@ -184,7 +216,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               </div>
             </div>
 
-            {/* Row 2: Short description */}
+            {/* Description */}
             <div className="grid gap-1.5">
               <Label htmlFor="prompt-desc">Short description</Label>
               <Textarea
@@ -197,7 +229,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               />
             </div>
 
-            {/* Row 3: System instruction */}
+            {/* System Instruction */}
             <div className="grid gap-1.5">
               <Label htmlFor="prompt-system">System instruction (optional)</Label>
               <Textarea
@@ -210,7 +242,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               />
             </div>
 
-            {/* Row 4: Template */}
+            {/* Template */}
             <div className="grid gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label htmlFor="prompt-template">
@@ -250,7 +282,7 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               )}
             </div>
 
-            {/* Row 5: AI Provider & Model Target */}
+            {/* AI Provider & Model Target */}
             <div className="grid gap-3.5 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <Label htmlFor="prompt-provider">AI provider</Label>
@@ -300,7 +332,13 @@ export function CreatePromptDialog({ open, close, onSuccessHandler }: CreateProm
               Cancel
             </Button>
             <Button type="submit" variant="brand" disabled={isFormSaving}>
-              {isFormSaving ? 'Saving…' : 'Save prompt'}
+              {isFormSaving
+                ? isEditMode
+                  ? 'Updating…'
+                  : 'Saving…'
+                : isEditMode
+                  ? 'Update prompt'
+                  : 'Save prompt'}
             </Button>
           </DialogFooter>
         </form>

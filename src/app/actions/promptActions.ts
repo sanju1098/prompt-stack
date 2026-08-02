@@ -144,3 +144,38 @@ export async function getPromptById(id: string) {
     };
   }
 }
+
+/** Updates an existing prompt in MongoDB by ID. */
+export async function updatePromptAction(id: string, input: CreatePromptAPIInput) {
+  try {
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return { success: false, error: 'Invalid Prompt ID.' };
+    }
+
+    await databaseConnect();
+    const detectedVariables = extractVariables(input.template);
+
+    const updatedPrompt = await PromptModel.findByIdAndUpdate(
+      id,
+      {
+        ...input,
+        variables: detectedVariables,
+        tags: input.tags || [],
+        category: input.category || 'General',
+      },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!updatedPrompt) {
+      return { success: false, error: 'Prompt not found.' };
+    }
+
+    return {
+      success: true,
+      prompt: JSON.parse(JSON.stringify(updatedPrompt)),
+    };
+  } catch (error: any) {
+    console.error('Error updating prompt:', error);
+    return { success: false, error: 'Failed to update prompt. Please try again.' };
+  }
+}

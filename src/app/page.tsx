@@ -8,9 +8,8 @@ import { getPromptsAction } from '@/app/actions/promptActions';
 import { getWorkspaceStatsAction } from '@/app/actions/statsActions';
 import { CreatePromptDialog } from '@/components/CreatePromptDialog';
 import { EmptyState } from '@/components/EmptyState';
-import { PlaygroundSheet } from '@/components/PlaygroundSheet';
 import { PromptCard } from '@/components/PromptCard';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CATEGORIES } from '@/global/constants';
@@ -27,7 +26,6 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'All'>('All');
   const [createOpen, setCreateOpen] = useState(false);
-  const [activePrompt, setActivePrompt] = useState<Prompt | null>(null);
 
   // Stats State
   const [statsData, setStatsData] = useState<WorkspaceStats | null>(null);
@@ -68,7 +66,6 @@ export default function Home() {
     }
   }, []);
 
-  // 3. Combined Handler: Refreshes both list and stats on prompt creation
   const handleRefreshAll = useCallback(() => {
     void fetchPrompts();
     void fetchStats();
@@ -260,10 +257,16 @@ export default function Home() {
                     </p>
                   }
                   primaryAction={
-                    <Button size="sm" variant="secondary" onClick={() => setActivePrompt(p)}>
+                    <Link
+                      href={`/${p._id}/playground`}
+                      className={cn(
+                        buttonVariants({ variant: 'secondary', size: 'sm' }),
+                        'gap-1.5'
+                      )}
+                    >
                       <Play className="size-3.5 mr-1.5" aria-hidden="true" />
                       Playground
-                    </Button>
+                    </Link>
                   }
                   secondaryAction={
                     <Link
@@ -285,11 +288,6 @@ export default function Home() {
         open={createOpen}
         close={() => setCreateOpen(false)}
         onSuccessHandler={handleRefreshAll}
-      />
-
-      <PlaygroundSheet
-        prompt={activePrompt}
-        onOpenChange={(open) => !open && setActivePrompt(null)}
       />
     </>
   );
