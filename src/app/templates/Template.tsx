@@ -75,14 +75,14 @@ export function Templates({ initialTemplates }: TemplatesProps) {
         </div>
 
         {/* Primary Action Button */}
-        <Button
+        {/* <Button
           variant="outline"
           onClick={() => setIsTemplateDialog(true)}
           className="shrink-0 rounded-xl shadow-xs2 sm:mt-2"
         >
           <Plus className="mr-1.5 size-4" aria-hidden />
           Create Template
-        </Button>
+        </Button> */}
       </div>
 
       {/* Toolbar: Search and Filter Tabs */}
