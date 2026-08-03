@@ -1,25 +1,31 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   AlertCircle,
   ArrowLeft,
+  CheckCircle2,
   Clock,
+  Code2,
   Copy,
+  CornerDownLeft,
   ExternalLink,
   Loader2,
   Play,
   RotateCcw,
+  Sliders,
   Sparkles,
+  Terminal,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { runPromptAction } from '@/app/actions/promptActions';
+import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PlaygroundStatus, Prompt } from '@/global/types';
 import { extractVariables } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
@@ -34,8 +40,8 @@ export function PlaygroundClient({ prompt }: PlaygroundClientProps) {
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
   const [executionTime, setExecutionTime] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  // Extract variables from prompt object or fallback to template string parsing
   const vars = useMemo(() => {
     if (prompt.variables && prompt.variables.length > 0) {
       return prompt.variables;
@@ -44,10 +50,20 @@ export function PlaygroundClient({ prompt }: PlaygroundClientProps) {
   }, [prompt]);
 
   const providerName = prompt.modelConfig?.provider || 'AI';
-  const modelName = prompt.modelConfig?.modelName || '';
+  const modelName = prompt.modelConfig?.modelName || 'Default Model';
 
-  // Server Action call
-  async function run() {
+  // Computed live preview with filled variables
+  const compiledPrompt = useMemo(() => {
+    let result = prompt.template || '';
+    Object.entries(values).forEach(([key, val]) => {
+      if (val) {
+        result = result.replaceAll(`{{${key}}}`, val);
+      }
+    });
+    return result;
+  }, [prompt.template, values]);
+
+  const run = useCallback(async () => {
     if (!prompt._id) {
       toast.error('Invalid prompt ID');
       return;
@@ -64,7 +80,6 @@ export function PlaygroundClient({ prompt }: PlaygroundClientProps) {
         setOutput(res.output);
         setStatus('done');
         setExecutionTime(res.executionTimeMs || 0);
-
         toast.success('Prompt executed successfully!');
       } else {
         const errorMessage = res.error || 'Execution failed.';
@@ -78,185 +93,299 @@ export function PlaygroundClient({ prompt }: PlaygroundClientProps) {
       setStatus('error');
       toast.error(errorMessage);
     }
-  }
+  }, [prompt._id, values]);
+
+  // Keyboard shortcut: Cmd/Ctrl + Enter to run
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (status !== 'loading') {
+          void run();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [run, status]);
+
+  const copyToClipboard = async () => {
+    if (!output) return;
+    await navigator.clipboard.writeText(output);
+    setCopied(true);
+    toast.success('Output copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Link
-            href="/"
-            className={cn(
-              buttonVariants({ variant: 'ghost', size: 'sm' }),
-              'group -ml-2 text-muted-foreground hover:text-foreground hover:bg-surface-raised hover:underline transition-all duration-200'
-            )}
-          >
-            <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1" />{' '}
-            <span className="text-sm font-medium tracking-tight">Back to Prompt Library</span>
-          </Link>
-
-          <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{prompt.title}</h1>
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+      {/* Workbench Header */}
+      <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
             <Link
-              href={`/${prompt._id}/prompt`}
-              className="inline-flex size-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-ring"
-              title="View prompt details"
-              aria-label="View prompt details"
+              href="/"
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                'text-muted-foreground hover:text-foreground'
+              )}
             >
-              <ExternalLink className="size-3.5" aria-hidden="true" />
+              <ArrowLeft className="size-3.5 mr-1" /> Back
             </Link>
+            <span className="text-muted-foreground/40">/</span>
+            <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider">
+              Playground
+            </Badge>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-brand-soft px-2.5 py-0.5 font-mono text-sm font-semibold uppercase tracking-wide text-foreground">
-              {providerName}
-            </span>
-            <span className="font-mono text-sm text-muted-foreground">{modelName}</span>
+          <div className="flex items-center gap-2 pt-1">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              {prompt.title}
+            </h1>
+            <Link
+              href={`/${prompt._id}/prompt`}
+              className="inline-flex size-6 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="View prompt details"
+            >
+              <ExternalLink className="size-3" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
+            <span className="font-semibold text-foreground uppercase">{providerName}</span>
+            <span className="mx-2 text-muted-foreground/40">•</span>
+            <span className="font-mono text-muted-foreground">{modelName}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Workspace Layout */}
-      <div className="mt-8 grid gap-6 lg:grid-cols-12 items-start">
-        {/* Left Panel: Variable Inputs & Action */}
-        <div className="flex flex-col gap-6 lg:col-span-5 rounded-2xl surface-panel p-6 border border-border">
-          <div className="space-y-3">
-            <div>
-              <h2 className="text-base font-semibold tracking-tight">Variables & Inputs</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Fill in the parameters below to evaluate the prompt template.
-              </p>
-            </div>
-
-            {/* Template Code Card */}
-            <div className="overflow-hidden rounded-xl border border-border bg-surface-raised shadow-xs">
-              <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-medium text-muted-foreground">
-                <span>Prompt Template</span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/80">
-                  Read-only
-                </span>
+      {/* Main Split Workbench Layout */}
+      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+        {/* Left Column: Input Panel & Prompt Template (5 cols) */}
+        <div className="flex flex-col gap-5 lg:col-span-5">
+          {/* Template & Compiled View Tabs */}
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
+            <Tabs defaultValue="template" className="w-full">
+              <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <Code2 className="size-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground">Prompt Definition</span>
+                </div>
+                <TabsList className="h-7 bg-background p-0.5 border border-border">
+                  <TabsTrigger value="template" className="h-6 px-2.5 text-[11px]">
+                    Template
+                  </TabsTrigger>
+                  <TabsTrigger value="compiled" className="h-6 px-2.5 text-[11px]">
+                    Live Preview
+                  </TabsTrigger>
+                </TabsList>
               </div>
 
-              <pre className="whitespace-pre-wrap wrap-break-word p-4 font-mono text-xs leading-relaxed text-foreground">
-                {prompt?.template}
-              </pre>
-            </div>
+              <TabsContent value="template" className="m-0 p-4">
+                <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap wrap-break-word font-mono text-xs leading-relaxed text-foreground">
+                  {prompt?.template}
+                </pre>
+              </TabsContent>
+
+              <TabsContent value="compiled" className="m-0 p-4">
+                <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap wrap-break-word font-mono text-xs leading-relaxed text-muted-foreground">
+                  {compiledPrompt}
+                </pre>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {vars.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border-strong bg-surface-raised px-4 py-6 text-center text-xs text-muted-foreground">
-              This prompt has no dynamic variable placeholders (`{'{{variable}}'}`). Run it as-is.
-            </p>
-          ) : (
-            <div className="grid gap-4">
-              {vars.map((v) => (
-                <div key={v} className="grid gap-2">
-                  <Label htmlFor={`var-${v}`} className="font-mono text-xs">
-                    {`{{${v}}}`}
-                  </Label>
-                  <Input
-                    id={`var-${v}`}
-                    value={values[v] ?? ''}
-                    onChange={(e) => setValues((prev) => ({ ...prev, [v]: e.target.value }))}
-                    placeholder={`Value for ${v}…`}
-                    className="rounded-xl"
-                  />
-                </div>
-              ))}
+          {/* Dynamic Variables Input Form */}
+          <div className="rounded-xl border border-border bg-card p-5 shadow-xs">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sliders className="size-4 text-brand" />
+                <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                  Variables & Arguments
+                </h2>
+              </div>
+              <Badge variant="secondary" className="font-mono text-[10px]">
+                {vars.length} {vars.length === 1 ? 'Variable' : 'Variables'}
+              </Badge>
             </div>
-          )}
 
-          <Button
-            variant="brand"
-            size="lg"
-            className="w-full"
-            onClick={run}
-            disabled={status === 'loading'}
-          >
-            {status === 'loading' ? (
-              <>
-                <Loader2 className="animate-spin" aria-hidden />
-                Running execution…
-              </>
+            {vars.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                No dynamic placeholders (`{'{{variable}}'}`) found in this template. Ready to run.
+              </div>
             ) : (
-              <>
-                <Play aria-hidden />
-                Execute Prompt
-              </>
+              <div className="space-y-4">
+                {vars.map((v) => (
+                  <div key={v} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor={`var-${v}`} className="font-mono text-xs text-foreground">
+                        {`{{${v}}}`}
+                      </Label>
+                      <span className="text-[10px] text-muted-foreground">Dynamic input</span>
+                    </div>
+
+                    {/* Container-based focus state to eliminate highlight gap artifacts */}
+                    <div className="rounded-lg border border-input bg-background p-1 transition-all focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+                      <textarea
+                        id={`var-${v}`}
+                        value={values[v] ?? ''}
+                        onChange={(e) => setValues((prev) => ({ ...prev, [v]: e.target.value }))}
+                        placeholder={`Enter ${v}...`}
+                        rows={5}
+                        className="w-full resize-y bg-transparent px-2 py-1.5 font-sans text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-          </Button>
+
+            {/* Run Trigger Section */}
+            <div className="mt-5 pt-3 border-t border-border">
+              <Button
+                variant="brand"
+                size="lg"
+                className="w-full gap-2 shadow-sm"
+                onClick={run}
+                disabled={status === 'loading'}
+              >
+                {status === 'loading' ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Executing Prompt...
+                  </>
+                ) : (
+                  <>
+                    <Play className="size-4 fill-current" />
+                    <span>Run Playground</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Right Panel: Rendered Markdown Output */}
-        <div className="flex flex-col gap-4 lg:col-span-7 rounded-2xl surface-panel border border-border min-h-100">
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+        {/* Right Column: Execution Output Console (7 cols) */}
+        <div className="flex min-h-150 flex-col rounded-xl border border-border bg-card shadow-xs lg:col-span-7">
+          {/* Header Bar */}
+          <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold tracking-tight">Output Result</h2>
+              <Terminal className="size-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold tracking-tight text-foreground">
+                Execution Output
+              </h2>
 
               {Boolean(executionTime && executionTime > 0) && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-raised px-2 py-0.5 font-mono text-[11px] font-normal text-muted-foreground">
-                  <Clock className="size-3 text-brand" aria-hidden="true" />
+                <Badge variant="outline" className="gap-1 font-mono text-[10px]">
+                  <Clock className="size-3 text-brand" />
                   {executionTime}ms
-                </span>
+                </Badge>
               )}
             </div>
+
             {status === 'done' && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(output);
-                  toast.success('Output copied to clipboard');
-                }}
+                onClick={copyToClipboard}
+                className="gap-1.5 text-xs"
               >
-                <Copy className="size-3.5 mr-1.5" />
-                Copy Output
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="size-3.5 text-emerald-500" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-3.5" />
+                    Copy Response
+                  </>
+                )}
               </Button>
             )}
           </div>
 
-          <div className="flex-1 p-6">
+          {/* Console Output Body */}
+          <div className="flex flex-1 flex-col justify-between p-6">
             {status === 'idle' && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Sparkles className="size-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Click <strong className="text-foreground">Execute Prompt</strong> to run this
-                  template and view formatted markdown results here.
+              <div className="my-auto flex flex-col items-center justify-center text-center">
+                <div className="flex size-12 items-center justify-center rounded-full border border-border bg-muted/30">
+                  <Sparkles className="size-6 text-muted-foreground/60" />
+                </div>
+                <h3 className="mt-3 text-sm font-medium text-foreground">Ready for Execution</h3>
+                <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                  Fill in your template variables on the left and hit{' '}
+                  <strong className="text-foreground">Run Playground</strong> or press{' '}
+                  <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+                    ⌘ + Enter
+                  </kbd>
+                  .
                 </p>
               </div>
             )}
 
             {status === 'loading' && (
-              <div className="space-y-3">
-                <Skeleton className="h-4 w-4/5" />
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin text-brand" />
+                  <span>Generating response from {modelName}...</span>
+                </div>
+                <Skeleton className="h-4 w-5/6" />
                 <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/5" />
-                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-4 w-3/4" />
               </div>
             )}
 
             {status === 'error' && (
-              <div
-                role="alert"
-                className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4"
-              >
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-destructive">Run failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={run}>
-                    <RotateCcw className="size-3.5 mr-1.5" /> Retry
-                  </Button>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-destructive">Execution Failed</p>
+                    <p className="text-xs text-muted-foreground">{error}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3 gap-1.5 text-xs"
+                      onClick={run}
+                    >
+                      <RotateCcw className="size-3" /> Retry Run
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
 
             {status === 'done' && (
-              <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed">
+              <div className="prose prose-xs dark:prose-invert max-w-none text-foreground leading-relaxed">
                 <ReactMarkdown>{output}</ReactMarkdown>
               </div>
             )}
+
+            {/* Bottom Status Footer */}
+            <div className="mt-6 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    'size-2 rounded-full',
+                    status === 'done'
+                      ? 'bg-emerald-500'
+                      : status === 'loading'
+                        ? 'bg-amber-500 animate-pulse'
+                        : status === 'error'
+                          ? 'bg-destructive'
+                          : 'bg-muted-foreground/40'
+                  )}
+                />
+                Status: {status.charAt(0).toUpperCase() + status.slice(1)}
+              </span>
+              <span className="flex items-center gap-1 font-mono">
+                <CornerDownLeft className="size-3" /> Ready
+              </span>
+            </div>
           </div>
         </div>
       </div>

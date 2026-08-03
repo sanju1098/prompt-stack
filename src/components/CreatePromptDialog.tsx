@@ -51,7 +51,7 @@ export function CreatePromptDialog({
     system: '',
     template: '',
     provider: 'gemini',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-flash-latest',
   };
 
   const [formData, setFormData] = useState<PromptFormData>(INITIAL_FORM_DATA);
@@ -71,7 +71,7 @@ export function CreatePromptDialog({
           system: promptToEdit.systemInstruction || '',
           template: promptToEdit.template || '',
           provider: (promptToEdit.modelConfig?.provider as Provider) || 'gemini',
-          model: promptToEdit.modelConfig?.modelName || 'gemini-2.5-flash',
+          model: promptToEdit.modelConfig?.modelName || 'gemini-flash-latest',
         });
       } else {
         setFormData(INITIAL_FORM_DATA);

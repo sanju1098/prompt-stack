@@ -66,7 +66,7 @@ export async function runPromptAction(promptId: string, variableValues: Record<s
 
     if (provider === 'gemini') {
       const response = await geminiClient.models.generateContent({
-        model: 'gemini-flash-latest', // Hardcoded / locked to Gemini 2.5 Flash
+        model: 'gemini-flash-latest',
         contents: finalPrompt,
         config: {
           temperature: temperature ?? 0.7,

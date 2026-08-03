@@ -76,7 +76,7 @@ export async function forkTemplateAction(templateId: string) {
       systemInstruction: templateDoc.systemInstruction || '',
       modelConfig: templateDoc.modelConfig || {
         provider: 'gemini',
-        modelName: 'gemini-2.5-flash',
+        modelName: 'gemini-flash-latest',
         temperature: 0.7,
         maxTokens: 1024,
       },

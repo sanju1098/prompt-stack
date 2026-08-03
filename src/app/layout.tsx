@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { Footer } from '@/components/Footer';
 import { Navbar } from '@/components/Navbar';
 
 const geistSans = Geist({
@@ -31,11 +32,7 @@ export default function RootLayout({
         <Toaster expand visibleToasts={6} position="top-right" richColors />
         <Navbar />
         {children}
-        <footer className="border-t border-border py-8">
-          <div className="mx-auto max-w-7xl px-4 text-sm text-muted-foreground sm:px-6 lg:px-8">
-            PromptStack · Powered by AI
-          </div>
-        </footer>
+        <Footer />
       </body>
     </html>
   );

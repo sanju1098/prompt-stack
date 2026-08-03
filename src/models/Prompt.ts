@@ -57,7 +57,7 @@ const PromptSchema = new Schema<IPrompt>(
       },
       modelName: {
         type: String,
-        default: 'gemini-2.5-flash',
+        default: 'gemini-flash-latest',
       },
       temperature: {
         type: Number,

@@ -53,10 +53,10 @@ const INITIAL_FORM_DATA: TemplateFormData = {
   description: '',
   system: '',
   template: '',
-  author: 'PromptVault',
+  author: 'PromptStack',
   isFeatured: false,
   provider: 'gemini',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-flash-latest',
 };
 
 export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTemplateDialogProps) {
@@ -65,8 +65,9 @@ export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTe
   const [showErrors, setShowErrors] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Reset form state when the dialog OPENS rather than when it closes
   useEffect(() => {
-    if (!open) {
+    if (open) {
       setFormData(INITIAL_FORM_DATA);
       setShowErrors(false);
       setIsSaving(false);
@@ -119,7 +120,7 @@ export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTe
         category: formData.category,
         template: formData.template,
         systemInstruction: formData.system,
-        author: formData.author || 'PromptVault',
+        author: formData.author || 'PromptStack',
         isFeatured: formData.isFeatured,
         variables: templateVariables,
         modelConfig: {
@@ -132,10 +133,11 @@ export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTe
 
       if (res.success) {
         toast.success('Public template published successfully!');
-        setFormData(INITIAL_FORM_DATA);
+
+        // Close dialog first
         close();
 
-        // Refresh route automatically to show newly added template
+        // Refresh route and execute success handler
         router.refresh();
         if (onSuccessHandler) {
           onSuccessHandler();
@@ -212,7 +214,7 @@ export function CreateTemplateDialog({ open, close, onSuccessHandler }: CreateTe
                   id="tpl-author"
                   value={formData.author}
                   onChange={(e) => handleFieldChange('author', e.target.value)}
-                  placeholder="e.g. PromptVault Team"
+                  placeholder="e.g. PromptStack Team"
                   className="rounded-xl"
                 />
               </div>
