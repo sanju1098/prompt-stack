@@ -103,15 +103,15 @@ export function Navbar() {
 
           {/* Actions */}
           <div className="flex shrink-0 items-center gap-2">
-            <Button
+            {/* <Button
               variant="brand"
               className="hidden sm:inline-flex"
               onClick={() => setOpenDialog(true)}
             >
               <Plus aria-hidden />
               New prompt
-            </Button>
-            <Button
+            </Button> */}
+            {/* <Button
               variant="brand"
               size="icon"
               aria-label="New prompt"
@@ -119,7 +119,7 @@ export function Navbar() {
               onClick={() => setOpenDialog(true)}
             >
               <Plus aria-hidden />
-            </Button>
+            </Button> */}
 
             {/* ToDo: User Account */}
 

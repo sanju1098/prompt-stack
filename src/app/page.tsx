@@ -239,8 +239,8 @@ export default function Home() {
                 <EmptyState
                   title="No prompts found"
                   description={emptyDescription}
-                  actionLabel="New prompt"
-                  onAction={() => setCreateOpen(true)}
+                  // actionLabel="New prompt"
+                  // onAction={() => setCreateOpen(true)}
                 />
               </div>
             ) : (

@@ -17,7 +17,7 @@ export function EditPromptButton({ prompt }: EditPromptButtonProps) {
 
   return (
     <>
-      <Button
+      {/* <Button
         variant="outline"
         size="sm"
         onClick={() => setIsEditOpen(true)}
@@ -25,7 +25,7 @@ export function EditPromptButton({ prompt }: EditPromptButtonProps) {
       >
         <Pencil className="size-3.5" />
         Edit Prompt
-      </Button>
+      </Button> */}
 
       <CreatePromptDialog
         open={isEditOpen}
